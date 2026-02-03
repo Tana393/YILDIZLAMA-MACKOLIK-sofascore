@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>yıldızlama</title>
+<style>
+  :root {
+    --bg: #050505;
+    --box: #111;
+    --text: #fff;
+    --border: #333;
+    --tab-bg: #222;
+    --tab-active-bg: #fff;
+    --tab-active-text: #000;
+    --back-bg: rgba(255, 255, 255, 0.15);
+    --accent: #f1c40f;
+    --news-border: #444;
+    --news-overlay: rgba(0,0,0,0.8);
+    --neon-shadow: none;
+  }
+
+  body.light-mode {
+    --bg: #f2f2f7;
+    --box: #fff;
+    --text: #000;
+    --border: #d1d1d6;
+    --tab-bg: #e5e5ea;
+    --tab-active-bg: #000;
+    --tab-active-text: #fff;
+    --back-bg: rgba(0, 0, 0, 0.1);
+    --accent: #ffcc00;
+    --news-border: #c7c7cc;
+    --news-overlay: rgba(255,255,255,0.8);
+  }
+
+  body.derby-mode {
+    --bg: #0a0011;
+    --box: #1a0525;
+    --text: #fff;
+    --border: #d600ff;
+    --accent: #00ffea;
+    --neon-shadow: 0 0 15px rgba(214, 0, 255, 0.5);
+    background-image: radial-gradient(circle at 50% 50%, #2a0033 0%, #000 100%);
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    transition: background 0.4s ease, color 0.4s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .topbar {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    background: var(--bg);
+    z-index: 10;
+    position: sticky;
+    top: 0;
+  }
+  .topbar h2 { margin: 0; font-size: 22px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* --- STORY STYLES (GÜNCELLENDİ) --- */
+  .stories-container {
+    padding: 20px 10px;
+    display: flex;
+    justify-content: center; /* Ortaya hizalandı */
+    gap: 30px; /* Araları açıldı */
+    background: linear-gradient(to bottom, var(--bg), rgba(255,255,255,0.02));
+  }
+  .story-circle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .story-circle:active { transform: scale(0.92); }
+
+  .story-img-wrap {
+    width: 72px; /* Boyut biraz büyütüldü */
+    height: 72px;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(45deg, var(--accent), #ff0055); /* Daha canlı gradient */
+    box-shadow: 0 0 15px rgba(241, 196, 15, 0.15); /* Hafif parlama */
+    position: relative;
+  }
+  
+  .story-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid var(--bg); /* Aradaki boşluk belirginleştirildi */
+    object-fit: cover;
+    background-color: #fff;
+  }
+  
+  .story-name { 
+    font-size: 11px; 
+    font-weight: 600;
+    opacity: 0.9; 
+    text-align: center; 
+    letter-spacing: 0.5px;
+  }
+  /* ---------------------------------- */
+
+  /* STORY VIEWER MODAL */
+  #storyViewer {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  #storyViewer img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .close-story {
+    position: absolute;
+    top: 30px;
+    right: 20px;
+    color: #fff;
+    font-size: 40px;
+    cursor: pointer;
+    z-index: 3001;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
+
+  .news-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 15px 10px;
+    overflow-x: auto;
+    gap: 12px;
+  }
+  
+  .news-card {
+    min-width: 280px;
+    height: 120px;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid var(--news-border);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .news-card:active { transform: scale(0.97); }
+  .news-card img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.5); }
+  
+  .news-title {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    right: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    z-index: 2;
+  }
+
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); z-index: 2000;
+    display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(5px);
+  }
+  .modal-box {
+    background: var(--box); width: 85%; max-width: 400px;
+    padding: 25px; border-radius: 20px; border: 1px solid var(--border);
+    text-align: center; position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .close-modal {
+    position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; opacity: 0.7;
+  }
+
+  .theme-toggle {
+    position: fixed;
+    bottom: 25px;
+    left: 20px;
+    z-index: 1000;
+    cursor: pointer;
+    background: var(--box);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
+  .controls input {
+    background: var(--box);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 15px;
+    border-radius: 12px;
+    outline: none;
+    font-size: 14px;
+    flex: 1;
+    transition: 0.3s;
+  }
+
+  .filters { display: flex; gap: 8px; margin-top: 5px; overflow-x: auto; padding-bottom: 5px; width: 100%; justify-content: center; }
+  .filter-btn {
+    background: var(--box);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.7;
+    white-space: nowrap;
+    transition: 0.3s;
+  }
+  .filter-btn.active { background: var(--accent); color: #000; font-weight: bold; opacity: 1; border-color: var(--accent); }
+
+  .profile-stats {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 15px;
+    background: rgba(125,125,125,0.1);
+    padding: 15px;
+    border-radius: 12px;
+  }
+  .p-stat { text-align: center; }
+  .p-stat .val { font-size: 18px; font-weight: bold; color: var(--accent); display: block; }
+  .p-stat .lbl { font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; }
+  
+  .trophy-case { display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+  .trophy { text-align: center; width: 60px; }
+  .trophy span { font-size: 24px; display: block; filter: drop-shadow(0 0 5px gold); }
+  .trophy small { font-size: 9px; opacity: 0.7; display: block; line-height: 1.2; }
+
+  .weather-badge {
+    position: absolute;
+    top: 55px;
+    right: 15px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    padding: 6px 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+    z-index: 5;
+  }
+
+  .featured-card {
+    margin: 0 14px 14px 14px;
+    height: 160px;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Sukrusaracoglu.jpg/500px-Sukrusaracoglu.jpg') center/cover;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .featured-overlay { background: linear-gradient(to top, rgba(0,0,0,0.95), transparent); width: 100%; padding: 20px; box-sizing: border-box; }
+  .featured-tag { background: var(--accent); color: #000; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; position: absolute; top: 15px; right: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+  .h2h-box { display: flex; flex-direction: column; text-align: center; background: var(--box); border-radius: 16px; margin: 0 14px 14px 14px; border: 1px solid var(--border); }
+  .h2h-main { display: flex; justify-content: space-around; padding: 18px; border-bottom: 1px solid var(--border); }
+  .h2h-extra { display: flex; justify-content: space-around; padding: 10px; background: rgba(125,125,125,0.05); font-size: 11px; }
+  .h2h-item span { display: block; font-size: 11px; opacity: 0.6; text-transform: uppercase; margin-bottom: 4px; }
+  .h2h-item b { font-size: 20px; color: var(--accent); }
+  
+  .win-rate-container { text-align: center; margin: 14px; padding: 18px; background: var(--box); border-radius: 16px; border: 1px solid var(--border); }
+  .win-bar-wrapper { height: 24px; background: #333; border-radius: 12px; overflow: hidden; display: flex; margin-top: 12px; }
+
+  .box { background: var(--box); border-radius: 16px; padding: 16px; margin: 14px; border: 1px solid var(--border); transition: border-color 0.5s; }
+  
+  body.derby-mode .box { border-color: #d600ff; box-shadow: 0 0 10px rgba(214,0,255,0.2); }
+
+  .press-box { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; }
+  .press-icon { font-size: 24px; background: var(--border); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .press-text { font-style: italic; opacity: 0.9; font-size: 13px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 0 12px 12px 12px; border: 1px solid var(--border); }
+
+  .vote-box { text-align: center; }
+  .vote-options { display: flex; gap: 10px; margin-top: 10px; }
+  .vote-btn { flex: 1; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--text); position: relative; overflow: hidden; }
+  .vote-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent); transition: width 0.5s; }
+
+  .heatmap-area { width: 100%; height: 150px; background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Soccer_Field_Transparant.svg/1200px-Soccer_Field_Transparant.svg.png') center/cover; position: relative; border-radius: 8px; margin-top: 10px; opacity: 0.8; }
+  .heat-spot { position: absolute; width: 40px; height: 40px; background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,255,0,0.4) 50%, transparent 100%); border-radius: 50%; }
+
+  .content { display: none; flex: 1; width: 100%; }
+  .content.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .match { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 5px 0; }
+
+  .team-profile-header { text-align: center; padding: 25px; background: var(--box); margin: 14px; border-radius: 16px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+  .team-profile-header img { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent); padding: 3px; background: var(--bg); object-fit: cover; }
+
+  .header { position: relative; height: 220px; overflow: hidden; }
+  .header-bg { width: 100%; height: 100%; object-fit: cover; filter: brightness(.35); transition: 0.5s; }
+  body.derby-mode .header-bg { filter: brightness(0.6) contrast(1.2) hue-rotate(280deg); }
+
+  .ticker-wrap { position: absolute; top: 0; width: 100%; background: var(--accent); color: #000; overflow: hidden; white-space: nowrap; z-index: 5; font-size: 13px; font-weight: 800; padding: 5px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+  .ticker { display: inline-block; animation: ticker 25s linear infinite; padding-left: 100%; }
+  @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+  .back, .share-btn { position: absolute; top: 40px; background: var(--back-bg); backdrop-filter: blur(10px); color: #fff; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; z-index: 10; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+  .back:active, .share-btn:active { transform: scale(0.9); }
+  .back { left: 15px; }
+  .share-btn { right: 15px; }
+
+  .overlay { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; gap: 15px; padding-top: 20px; }
+  .team { text-align: center; width: 100px; }
+  .team img { width: 60px; height: 60px; object-fit: contain; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
+  .score-area { text-align: center; min-width: 100px; }
+  .score-area h2 { margin: 5px 0; font-size: 38px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+  body.derby-mode .score-area h2 { color: #00ffea; text-shadow: 0 0 20px #00ffea; }
+  
+  .tabs { display: flex; gap: 10px; padding: 10px 14px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border); background: var(--box); }
+  .tab { background: var(--tab-bg); padding: 10px 20px; border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 13px; font-weight: 600; transition: 0.3s; }
+  .tab.active { background: var(--tab-active-bg); color: var(--tab-active-text); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+  
+  .motm-card { display: flex; align-items: center; gap: 15px; background: linear-gradient(135deg, var(--accent) 0%, #e67e22 100%); color: #000; padding: 15px; border-radius: 16px; box-shadow: 0 4px 15px rgba(241, 196, 15, 0.3); }
+  .motm-img { width: 50px; height: 50px; border-radius: 50%; background: #fff; object-fit: cover; border: 2px solid #fff; }
+
+  #kadroImg, #video { width: 100%; border-radius: 12px; display: block; }
+
+  .stat-bar { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; display: flex; }
+  .stat-left { background: #2ecc71; }
+  .stat-right { background: #3498db; }
+
+  .forum-comment { border-bottom: 1px solid var(--border); padding: 12px 0; }
+  .forum-user { font-weight: bold; color: var(--accent); font-size: 13px; display: flex; align-items: center; gap: 5px; }
+  .forum-text { font-size: 14px; margin-top: 5px; opacity: 0.9; }
+  .forum-input-area { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+  .forum-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; outline: none; }
+
+  .bet-group { margin-bottom: 20px; }
+  .bet-title { font-size: 12px; color: var(--accent); margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+  .bet-row { display: flex; gap: 10px; }
+  .bet-btn { flex: 1; background: var(--box); border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: 0.2s; position:relative; overflow:hidden;}
+  .bet-btn:active { transform: scale(0.95); }
+  .bet-btn span:first-child { font-size: 11px; opacity: 0.6; font-weight: bold; }
+  .bet-btn span:last-child { font-size: 15px; font-weight: 800; color: #fff; }
+  body.light-mode .bet-btn span:last-child { color: #000; }
+  
+  .bet-btn.selected { background: var(--accent); border-color: var(--accent); }
+  .bet-btn.selected span:last-child { color: #000; }
+  .bet-btn.selected span:first-child { color: #000; opacity: 1; }
+
+  footer { padding: 30px; text-align: center; font-size: 12px; opacity: 0.5; margin-top: auto; padding-bottom: 100px; }
+</style>
+</head>
+<body>
+
+<div class="theme-toggle" onclick="toggleTheme()">🌓</div>
+
+<div id="storyViewer">
+    <div class="close-story" onclick="closeStory()">×</div>
+    <img id="storyImage" src="">
+</div>
+
+<div class="topbar">
+  <h2>yıldızlama</h2>
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="Oyuncu/Takım ara..." onkeyup="filterDate()">
+    <input type="date" id="datePicker" onchange="filterDate()">
+  </div>
+  <div class="filters">
+    <div class="filter-btn active" onclick="setFilter('all', this)">Tümü</div>
+    <div class="filter-btn" onclick="setFilter('win', this)">Galibiyet</div>
+    <div class="filter-btn" onclick="setFilter('draw', this)">Beraberlik</div>
+    <div class="filter-btn" onclick="setFilter('loss', this)">Mağlubiyet</div>
+  </div>
+</div>
+
+<div id="home" class="content active">
+
+  <div class="stories-container" id="storiesArea"></div>
+
+  <div class="news-wrapper">
+    <div class="news-card" onclick="openNews(1)">
+      <img src="https://foto.haberler.com/haber/2025/05/23/super-lig-sampiyonluk-kupasi-altin-mi-degeri-ne-18661550_3143_amp.jpg" alt="Berke">
+      <div class="news-title">Berke Kurt: "Bu Sezon Kupa Benim Olacak"</div>
+    </div>
+    <div class="news-card" onclick="openNews(2)">
+      <img src="https://media.fenerbahce.org/FB/files/20/2016856c-6a27-4ab5-997e-3d130860fc18.JPG" alt="Hüseyin">
+      <div class="news-title">Hüseyin Bütüner'den İddialı Paylaşım!</div>
+    </div>
+    <div class="news-card" onclick="openNews(3)">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4MPPhVcPAmiDOPNhJt9vK6cbCETC1o8LSHZxxWSyFDQGqfgjzzcj6Wa4&s=10" alt="Derbi">
+      <div class="news-title">Büyük Derbi Öncesi Nefesler Tutuldu</div>
+    </div>
+  </div>
+
+  <div id="featuredArea"></div>
+  <div id="winRateArea"></div>
+  <div id="h2hArea"></div>
+  <div id="teamProfile"></div>
+  <div id="matchList"></div>
+</div>
+
+<div id="match" class="content">
+  <div class="header">
+    <div class="ticker-wrap"><div class="ticker" id="matchTicker"></div></div>
+    <div class="weather-badge" id="weatherBadge"></div>
+    <div class="back" onclick="goBack()">❮</div>
+    <div class="share-btn" onclick="shareMatch()">🔗</div>
+    <img id="stadiumImg" class="header-bg">
+    <div class="overlay">
+      <div class="team">
+        <img id="team1Logo"><div id="team1Name" style="font-size:13px; margin-top:5px; font-weight:bold"></div>
+      </div>
+      <div class="score-area">
+        <div id="league" style="font-size:10px; opacity:0.8; margin-bottom:5px"></div>
+        <h2 id="score"></h2>
+        <div id="status" style="font-size:12px; font-weight:bold; background:#fff; color:#000; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:5px"></div>
+      </div>
+      <div class="team">
+        <img id="team2Logo"><div id="team2Name" style="font-size:13px; margin-top:5px; font-weight:bold"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('ozet',this)">Özet</div>
+    <div class="tab" onclick="showTab('kadro',this)">Kadro</div>
+    <div class="tab" onclick="showTab('bahis',this)">İddaa</div>
+    <div class="tab" onclick="showTab('detay',this)">Detay</div>
+    <div class="tab" onclick="showTab('istatistik',this)">İstatistik</div>
+    <div class="tab" onclick="showTab('anlatim',this)">Anlatım</div>
+    <div class="tab" onclick="showTab('forum',this)">Forum</div>
+    <div class="tab" onclick="showTab('puan',this)">Puan</div>
+  </div>
+
+  <div id="ozet" class="sub-content active">
+    <div class="box" id="motmArea"></div>
+    
+    <div class="box" id="votingSection">
+      <div class="vote-box">
+        <div style="font-size:12px; font-weight:bold; color:var(--accent);">MAÇIN ADAMI KİM?</div>
+        <div class="vote-options">
+           <button class="vote-btn" onclick="voteMotm(1)">
+             <div id="voteName1">Berke</div>
+             <div class="vote-bar" id="voteBar1" style="width:0%"></div>
+           </button>
+           <button class="vote-btn" onclick="voteMotm(2)">
+             <div id="voteName2">Hüseyin</div>
+             <div class="vote-bar" id="voteBar2" style="width:0%"></div>
+           </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="box">
+        <div style="font-size:11px; opacity:0.6; font-weight:bold">MAÇ SONU RÖPORTAJI</div>
+        <div class="press-box" id="pressArea"></div>
+    </div>
+
+    <div class="box" id="tacticNote" style="font-size: 13px; line-height:1.6; border-left: 4px solid var(--accent);"></div>
+    <div class="box"><video id="video" controls style="width:100%; border-radius:8px"></video></div>
+  </div>
+
+  <div id="kadro" class="sub-content" style="display:none"><div class="box"><img id="kadroImg"></div></div>
+
+  <div id="bahis" class="sub-content" style="display:none">
+    <div class="box" id="bettingArea"></div>
+  </div>
+
+  <div id="detay" class="sub-content" style="display:none"><div id="detayContent"></div></div>
+  
+  <div id="istatistik" class="sub-content" style="display:none">
+    <div class="box">
+        <div style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center">SICAKLIK HARİTASI</div>
+        <div class="heatmap-area" id="heatmapVisual">
+            </div>
+    </div>
+    <div id="istatistikBars" class="box"></div>
+  </div>
+
+  <div id="anlatim" class="sub-content" style="display:none"><div class="box" id="anlatimText" style="line-height:1.6"></div></div>
+  
+  <div id="forum" class="sub-content" style="display:none">
+    <div class="box">
+      <h4 style="margin-top:0">Tribün / Forum</h4>
+      <div id="forumComments"></div>
+      <div class="forum-input-area">
+        <input type="text" id="forumUserName" class="forum-input" placeholder="Adınız">
+        <textarea id="forumCommentText" class="forum-input" rows="2" placeholder="Maç hakkında yorum yapın veya oran paylaşın..."></textarea>
+        <button onclick="addComment()" style="background:var(--accent); border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; color:#000">Gönder</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="puan" class="sub-content" style="display:none">
+    <div class="box">
+      <table id="puanTable" style="width:100%; font-size:14px; border-collapse:collapse; text-align:center;">
+        <thead><tr style="opacity:0.6; border-bottom:1px solid #333"><th>#</th><th style="text-align:left; padding-left:10px">Takım</th><th>AG</th><th>YG</th><th>P</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="newsModal" onclick="closeNews(event)">
+  <div class="modal-box">
+    <div class="close-modal" onclick="document.getElementById('newsModal').style.display='none'">&times;</div>
+    <h3 id="modalTitle" style="color:var(--accent); margin-top:0"></h3>
+    <p id="modalText" style="font-size:14px; line-height:1.5; opacity:0.8"></p>
+    <button onclick="document.getElementById('newsModal').style.display='none'" style="background:var(--accent); border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer; margin-top:15px">Kapat</button>
+  </div>
+</div>
+
+<footer>&copy; 2026 Yıldızlama</footer>
+
+<script>
+let currentFilter = 'all';
+let currentMatchId = null;
+
+// SADECE 2 STORY KİLİTLENDİ
+const stories = [
+  { 
+    name: "Berke Kurt", 
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png", 
+    full: "https://images.ntvspor.net/images/BayernM%C3%BCnih(2).JPG?width=930&format=webp&quality=85" 
+  },
+  { 
+    name: "Hüseyin B", 
+    thumb: "https://upload.wikimedia.org/wikipedia/tr/thumb/8/86/Fenerbah%C3%A7e_SK.png/450px-Fenerbah%C3%A7e_SK.png", 
+    full: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Sadettin_Saran_20251022_%281%29.jpg/500px-Sadettin_Saran_20251022_%281%29.jpg" 
+  }
+];
+
+const teamData = {
+  "Berke Kurt": { 
+      rating: 92, chemistry: 99, market: "125M €", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png",
+      trophies: [{name:"Şampiyonlar Ligi", count:1}, {name:"Lig Kupası", count:3}]
+  },
+  "Hüseyin Bütüner": { 
+      rating: 91, chemistry: 95, market: "118M €", logo: "https://upload.wikimedia.org/wikipedia/tr/thumb/8/86/Fenerbah%C3%A7e_SK.png/450px-Fenerbah%C3%A7e_SK.png",
+      trophies: [{name:"Dünya Kupası", count:1}, {name:"Süper Kupa", count:2}]
+  }
+};
+
+const matches = [
+  {
+    id: 0, date: "2026-02-05", league: "FC26 Mobile", status: "MS", score: "5 - 3",
+    weather: { icon: "☁️", temp: "14°C", desc: "Bulutlu" },
+    tactic: "Berke bu maçta tamamen kontra atağa dayalı oynadı ve meyvesini aldı.",
+    team1: {name: "Berke Kurt", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png"}, team2: {name: "Hüseyin Bütüner", logo: "https://upload.wikimedia.org/wikipedia/tr/thumb/8/86/Fenerbah%C3%A7e_SK.png/450px-Fenerbah%C3%A7e_SK.png"},
+    stadium: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Sukrusaracoglu.jpg/500px-Sukrusaracoglu.jpg", video: "ozet.mp4", kadro: "kadro.png",
+    motm: { name: "Berke Kurt", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png" },
+    anlatimText: "Maç boyunca tempoyu belirleyen Berke Kurt, kritik anlarda etkili hücumlarla fark yarattı.",
+    events: ["⚽ 7' Berke", "⚽ 19' Hüseyin", "⚽ 33' Berke", "⚽ 41' Hüseyin", "⚽ 58' Berke", "⚽ 74' Berke", "⚽ 88' Hüseyin", "⚽ 90+1' Berke"],
+    istatistik: { sutKaleyiBulan: [6, 2], topaSahip: [56, 44], sutSayisi: [12, 9], pasIsabet: [93, 82], faul: [0, 1], ofsayt: [1, 0] },
+    puanDurumu: [{team: "Berke Kurt", AG: 5, YG: 3, AV: 2, puan: 3}, {team: "Hüseyin Bütüner", AG: 3, YG: 5, AV: -2, puan: 0}],
+    comments: [
+        {user: "EfsaneYorumcu", text: "Berke'nin kontra atakları Hüseyin'i bitirdi. Oran 1.40 civarındaydı zaten."},
+        {user: "FutbolAnaliz", text: "Hüseyin'in savunması bu maçta çok açıktı, skor şaşırtmadı."}
+    ],
+    odds: { ms1: 1.85, ms0: 3.20, ms2: 2.90, kgVar: 1.40, kgYok: 2.30 },
+    press: { name: "Berke Kurt", quote: "Rakibimi iyi analiz etmiştim, boşlukları affetmedim." },
+    heatmap: [{top: "20%", left:"30%"}, {top: "50%", left:"50%"}, {top: "80%", left:"40%"}]
+  },
+  {
+    id: 1, date: "2026-02-06", league: "FC26 Mobile", status: "MS", score: "2 - 4",
+    weather: { icon: "🌧️", temp: "9°C", desc: "Yağmurlu" },
+    tactic: "Hüseyin'in kanat varyasyonları Berke'nin savunma kilidini açmayı başardı.",
+    team1: {name: "Berke Kurt", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png"}, team2: {name: "Hüseyin Bütüner", logo: "https://upload.wikimedia.org/wikipedia/tr/thumb/8/86/Fenerbah%C3%A7e_SK.png/450px-Fenerbah%C3%A7e_SK.png"},
+    stadium: "https://im.mackolik.com/img/stad/6081_01.jpg?v=2.139", video: "ozet2.mp4", kadro: "kadro2.png",
+    motm: { name: "Hüseyin Bütüner", img: "https://upload.wikimedia.org/wikipedia/tr/thumb/8/86/Fenerbah%C3%A7e_SK.png/450px-Fenerbah%C3%A7e_SK.png" },
+    anlatimText: "Hüseyin Bütüner bu maçta muazzam bir geri dönüşe imza attı.",
+    events: ["⚽ 12' Berke", "⚽ 25' Hüseyin", "⚽ 44' Hüseyin", "⚽ 55' Berke", "⚽ 70' Hüseyin", "⚽ 88' Hüseyin"],
+    istatistik: { sutKaleyiBulan: [3, 7], topaSahip: [42, 58], sutSayisi: [8, 14], pasIsabet: [80, 91], faul: [2, 1], ofsayt: [0, 2] },
+    puanDurumu: [{team: "Berke Kurt", AG: 7, YG: 7, AV: 0, puan: 3}, {team: "Hüseyin Bütüner", AG: 7, YG: 7, AV: 0, puan: 3}],
+    comments: [
+        {user: "KuponcuAli", text: "Yağmurlu havada Hüseyin'in şutları Berke'yi yanılttı. MS 2 bankoydu."},
+        {user: "TaktikDehası", text: "Kanatları çok iyi kullandı Hüseyin, Berke cevap veremedi."}
+    ],
+    odds: { ms1: 2.10, ms0: 3.00, ms2: 2.45, kgVar: 1.55, kgYok: 2.05 },
+    press: { name: "Hüseyin Bütüner", quote: "Yağmurlu hava benim oyunumu güçlendiriyor, hak ettik." },
+    heatmap: [{top: "10%", left:"80%"}, {top: "30%", left:"85%"}, {top: "90%", left:"80%"}]
+  },
+  {
+    id: 2, date: "2026-02-07", league: "FC26 Mobile", status: "MS", score: "4 - 4",
+    weather: { icon: "☀️", temp: "19°C", desc: "Güneşli" },
+    tactic: "İki taraf da hücumda kusursuzdu ama savunmalar sınıfta kaldı.",
+    team1: {name: "Berke Kurt", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png"}, team2: {name: "Hüseyin Bütüner", logo: "https://upload.wikimedia.org/wikipedia/tr/thumb/8/86/Fenerbah%C3%A7e_SK.png/450px-Fenerbah%C3%A7e_SK.png"},
+    stadium: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Sukrusaracoglu.jpg/500px-Sukrusaracoglu.jpg", video: "ozet3.mp4", kadro: "kadro.png",
+    motm: { name: "Berke Kurt", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png" },
+    anlatimText: "Serinin üçüncü maçında inanılmaz bir gol düellosu yaşandı.",
+    events: ["⚽ 10' Berke", "⚽ 22' Hüseyin", "⚽ 35' Berke", "⚽ 48' Hüseyin", "⚽ 60' Berke", "⚽ 72' Hüseyin", "⚽ 85' Berke", "⚽ 90' Hüseyin"],
+    istatistik: { sutKaleyiBulan: [8, 8], topaSahip: [50, 50], sutSayisi: [15, 15], pasIsabet: [88, 88], faul: [2, 2], ofsayt: [1, 1] },
+    puanDurumu: [{team: "Berke Kurt", AG: 11, YG: 11, AV: 0, puan: 4}, {team: "Hüseyin Bütüner", AG: 11, YG: 11, AV: 0, puan: 4}],
+    comments: [
+        {user: "GolMakinesi", text: "Böyle maç görmedim! KG VAR oransız bile gelirdi."},
+        {user: "BerkeFan", text: "Berke galibiyeti kaçırdı son dakikada, Hüseyin iyi direndi."}
+    ],
+    odds: { ms1: 2.00, ms0: 3.30, ms2: 2.60, kgVar: 1.30, kgYok: 2.60 },
+    press: { name: "Berke Kurt", quote: "Savunmamız bugün iyi değildi, önümüzdeki maça bakacağız." },
+    heatmap: [{top: "50%", left:"50%"}, {top: "40%", left:"60%"}, {top: "60%", left:"40%"}]
+  }
+];
+
+const newsData = {
+  1: { title: "Berke Kurt: 'Kazanacağız'", text: "Son antrenmanda basına konuşan Berke Kurt, formunun zirvesinde olduğunu ve Hüseyin Bütüner karşısında mutlak galibiyet beklediğini söyledi." },
+  2: { title: "Hüseyin'den Şov!", text: "Hüseyin Bütüner dünkü idmanda attığı frikik golüyle takım arkadaşlarını büyüledi. Derbiye özel bir kramponla çıkacağı konuşuluyor." },
+  3: { title: "Derbi Öncesi Son Durum", text: "Biletlerin tükendiği dev maçta hava durumunun futbol oynamaya elverişli olması bekleniyor. İki taraf da tam kadro sahada olacak." }
+};
+
+// STORY FUNCTIONS
+function initStories() {
+  const area = document.getElementById("storiesArea");
+  area.innerHTML = stories.map((s, index) => `
+    <div class="story-circle" onclick="openStory(${index})">
+      <div class="story-img-wrap"><img src="${s.thumb}" class="story-img"></div>
+      <div class="story-name">${s.name}</div>
+    </div>
+  `).join("");
+}
+
+function openStory(index) {
+    const viewer = document.getElementById("storyViewer");
+    const img = document.getElementById("storyImage");
+    img.src = stories[index].full;
+    viewer.style.display = "flex";
+}
+
+function closeStory() {
+    document.getElementById("storyViewer").style.display = "none";
+}
+
+function openNews(id) {
+  const data = newsData[id];
+  document.getElementById("modalTitle").innerText = data.title;
+  document.getElementById("modalText").innerText = data.text;
+  document.getElementById("newsModal").style.display = "flex";
+}
+
+function closeNews(e) {
+  if(e.target.id === "newsModal") document.getElementById("newsModal").style.display = "none";
+}
+
+function toggleTheme() { 
+  document.body.classList.toggle("light-mode"); 
+}
+
+function setFilter(filterType, el) {
+  currentFilter = filterType;
+  document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+  el.classList.add("active");
+  filterDate();
+}
+
+function filterDate() {
+  const d = document.getElementById("datePicker").value;
+  const s = document.getElementById("searchInput").value.trim().toLowerCase();
+  const profileDiv = document.getElementById("teamProfile");
+  const matchList = document.getElementById("matchList");
+  const h2hArea = document.getElementById("h2hArea");
+  const featArea = document.getElementById("featuredArea");
+  const winRateArea = document.getElementById("winRateArea");
+  
+  profileDiv.innerHTML = ""; h2hArea.innerHTML = ""; winRateArea.innerHTML = "";
+  
+  const filtered = matches.filter(m => {
+    const matchDate = d ? m.date === d : true;
+    const isTeam1 = m.team1.name.toLowerCase().includes(s);
+    const isTeam2 = m.team2.name.toLowerCase().includes(s);
+    const matchSearch = isTeam1 || isTeam2;
+    
+    let statusFilter = true;
+    const s1 = parseInt(m.score.split("-")[0]);
+    const s2 = parseInt(m.score.split("-")[1]);
+    let userSide = s && isTeam2 ? "team2" : "team1"; 
+
+    if (currentFilter === 'win') {
+      statusFilter = (userSide === "team1") ? s1 > s2 : s2 > s1;
+    } else if (currentFilter === 'loss') {
+      statusFilter = (userSide === "team1") ? s1 < s2 : s2 < s1;
+    } else if (currentFilter === 'draw') {
+      statusFilter = s1 === s2 && m.status === "MS";
+    }
+    return matchDate && matchSearch && statusFilter;
+  });
+
+  featArea.innerHTML = (s === "" && !d && currentFilter === 'all') ? `
+    <div class="featured-card" onclick="openMatch(${matches[2].id})">
+      <div class="featured-tag">HAFTANIN MAÇI</div>
+      <div class="featured-overlay">
+        <div style="font-size:12px; opacity:0.8">${matches[2].league}</div>
+        <div style="font-weight:bold; font-size:18px">${matches[2].team1.name} VS ${matches[2].team2.name}</div>
+        <div style="font-size:14px; margin-top:5px; font-weight:bold; color:var(--accent)">${matches[2].score}</div>
+      </div>
+    </div>` : "";
+
+  if (s !== "" && filtered.length > 0) {
+    let bWin = 0, hWin = 0, draw = 0, bGoals = 0, hGoals = 0;
+    let maxDiff = 0, maxScore = "";
+    
+    filtered.forEach(m => {
+      if(m.status !== "MS") return;
+      const scores = m.score.split(" - ");
+      const s1 = parseInt(scores[0]);
+      const s2 = parseInt(scores[1]);
+      bGoals += s1; hGoals += s2;
+      
+      if(Math.abs(s1-s2) > maxDiff) { maxDiff = Math.abs(s1-s2); maxScore = m.score; }
+      if(s1 > s2) bWin++; else if(s2 > s1) hWin++; else draw++;
+    });
+
+    const total = (bWin + hWin + draw) || 1;
+    const bPerc = Math.round((bWin / total) * 100);
+    const hPerc = Math.round((hWin / total) * 100);
+    const dPerc = 100 - (bPerc + hPerc);
+
+    winRateArea.innerHTML = `
+      <div class="win-rate-container">
+        <div style="font-size:12px; font-weight:bold; opacity:0.7">GALİBİYET YÜZDESİ</div>
+        <div class="win-bar-wrapper">
+          <div style="width:${bPerc}%; background:#2ecc71; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold">B %${bPerc}</div>
+          <div style="width:${dPerc}%; background:#f1c40f; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:#000">%${dPerc}</div>
+          <div style="width:${hPerc}%; background:#3498db; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold">H %${hPerc}</div>
+        </div>
+      </div>`;
+
+    h2hArea.innerHTML = `
+      <div class="h2h-box">
+        <div class="h2h-main">
+            <div class="h2h-item"><span>BERKE</span><b>${bWin} G</b></div>
+            <div class="h2h-item"><span>BERABERE</span><b>${draw}</b></div>
+            <div class="h2h-item"><span>HÜSEYİN</span><b>${hWin} G</b></div>
+        </div>
+        <div class="h2h-extra">
+            <div>Toplam Gol: <b>${bGoals + hGoals}</b></div>
+            <div>En Farklı Skor: <b>${maxScore || "-"}</b></div>
+        </div>
+      </div>`;
+
+    let foundName = filtered[0].team1.name.toLowerCase().includes(s) ? filtered[0].team1.name : filtered[0].team2.name;
+    let data = teamData[foundName] || { rating: "?", chemistry: "?", market: "?", logo: "", trophies: [] };
+    
+    let trophyHtml = "";
+    if(data.trophies) {
+        trophyHtml = `<div class="trophy-case">
+            ${data.trophies.map(t => `<div class="trophy"><span>🏆</span><small>${t.count}x<br>${t.name}</small></div>`).join('')}
+        </div>`;
+    }
+
+    profileDiv.innerHTML = `
+      <div class="team-profile-header">
+        <img src="${data.logo || 'https://via.placeholder.com/80'}">
+        <h3 style="margin:10px 0 0 0">${foundName}</h3>
+        <div class="profile-stats">
+          <div class="p-stat"><span class="val">${data.rating}</span><span class="lbl">GEN</span></div>
+          <div class="p-stat"><span class="val">${data.chemistry}</span><span class="lbl">KİMYA</span></div>
+          <div class="p-stat"><span class="val">${data.market}</span><span class="lbl">PİYASA</span></div>
+        </div>
+        ${trophyHtml}
+      </div>`;
+  }
+
+  matchList.innerHTML = filtered.length ? filtered.map(m => `
+    <div class="box">
+      <div class="match" onclick="openMatch(${m.id})">
+        <div style="width:40px; font-size:11px; font-weight:bold; color:var(--accent)">${m.status}</div>
+        <div style="flex:1; text-align:center; font-weight:600">${m.team1.name} ${m.score} ${m.team2.name}</div>
+        <div style="width:30px; text-align:right; opacity:0.3">❯</div>
+      </div>
+    </div>`).join("") : "<p style='text-align:center; opacity:0.5; padding:20px'>Maç bulunamadı.</p>";
+}
+
+function openMatch(i) {
+  currentMatchId = i;
+  const m = matches[i];
+  document.getElementById("home").style.display = "none";
+  document.getElementById("match").style.display = "block";
+  window.scrollTo(0,0);
+
+  if (m.league.includes("DERBİ")) {
+    document.body.classList.add("derby-mode");
+  } else {
+    document.body.classList.remove("derby-mode");
+  }
+  
+  document.getElementById("matchTicker").innerText = "SON DAKİKA: " + m.events.join(" --- ") + " --- " + m.anlatimText;
+  document.getElementById("weatherBadge").innerHTML = `${m.weather.icon} ${m.weather.temp} - ${m.weather.desc}`;
+  document.getElementById("tacticNote").innerText = "TEKNİK DİREKTÖR NOTU: " + m.tactic;
+
+  document.getElementById("stadiumImg").src = m.stadium;
+  document.getElementById("team1Logo").src = m.team1.logo;
+  document.getElementById("team2Logo").src = m.team2.logo;
+  document.getElementById("team1Name").innerText = m.team1.name;
+  document.getElementById("team2Name").innerText = m.team2.name;
+  document.getElementById("score").innerText = m.score;
+  document.getElementById("status").innerText = m.status;
+  document.getElementById("league").innerText = m.league;
+  document.getElementById("video").src = m.video;
+  document.getElementById("kadroImg").src = m.kadro;
+  document.getElementById("anlatimText").innerText = m.anlatimText;
+  
+  if(m.press) {
+      document.getElementById("pressArea").innerHTML = `
+        <div class="press-icon">🎤</div>
+        <div class="press-text"><b>${m.press.name}:</b> "${m.press.quote}"</div>
+      `;
+  }
+
+  const hm = document.getElementById("heatmapVisual");
+  hm.innerHTML = "";
+  if(m.heatmap) {
+      m.heatmap.forEach(h => {
+          hm.innerHTML += `<div class="heat-spot" style="top:${h.top}; left:${h.left}"></div>`;
+      });
+  }
+
+  document.getElementById("motmArea").innerHTML = `
+    <div class="motm-card">
+      <img src="${m.motm.img}" class="motm-img">
+      <div class="motm-info">
+        <div style="font-size:10px; font-weight:bold; opacity:0.8">MAÇIN OYUNCUSU</div>
+        <div style="font-size:16px; font-weight:bold">${m.motm.name}</div>
+      </div>
+    </div>`;
+
+  document.getElementById("voteName1").innerText = m.team1.name;
+  document.getElementById("voteName2").innerText = m.team2.name;
+  loadBetting(m);
+  document.getElementById("detayContent").innerHTML = m.events.map(e => `<div class="box" style="margin:8px 14px; font-size:14px; padding:12px">${e}</div>`).join("");
+  loadStats(m.istatistik);
+  loadComments(m.comments);
+
+  const tb = document.getElementById("puanTable").querySelector("tbody");
+  tb.innerHTML = "";
+  m.puanDurumu.sort((a,b) => b.puan - a.puan).forEach((t, idx) => {
+    tb.innerHTML += `<tr><td style="padding:8px">${idx+1}</td><td style="text-align:left">${t.team}</td><td>${t.AG}</td><td>${t.YG}</td><td><b>${t.puan}</b></td></tr>`;
+  });
+}
+
+function voteMotm(team) {
+    const p1 = Math.floor(Math.random() * 50) + 20; 
+    const p2 = 100 - p1;
+    document.getElementById("voteBar1").style.width = team === 1 ? Math.max(p1,p2) + "%" : Math.min(p1,p2) + "%";
+    document.getElementById("voteBar2").style.width = team === 2 ? Math.max(p1,p2) + "%" : Math.min(p1,p2) + "%";
+    alert("Oyunuz kaydedildi!");
+}
+
+function loadBetting(m) {
+  const area = document.getElementById("bettingArea");
+  if(!m.odds) { area.innerHTML = "Oranlar kapandı."; return; }
+  area.innerHTML = `
+    <div class="bet-group">
+      <div class="bet-title">MAÇ SONUCU</div>
+      <div class="bet-row">
+        <div class="bet-btn" onclick="toggleBet(this)"><span>MS 1</span><span>${m.odds.ms1}</span></div>
+        <div class="bet-btn" onclick="toggleBet(this)"><span>MS X</span><span>${m.odds.ms0}</span></div>
+        <div class="bet-btn" onclick="toggleBet(this)"><span>MS 2</span><span>${m.odds.ms2}</span></div>
+      </div>
+    </div>`;
+}
+
+function toggleBet(el) {
+  document.querySelectorAll(".bet-btn").forEach(b => b.classList.remove("selected"));
+  el.classList.add("selected");
+  alert("Oran kupona eklendi!");
+}
+
+function loadComments(comments) {
+    const list = document.getElementById("forumComments");
+    list.innerHTML = comments.map(c => `
+        <div class="forum-comment">
+            <div class="forum-user"><span>👤</span> ${c.user}</div>
+            <div class="forum-text">${c.text}</div>
+        </div>
+    `).join("");
+}
+
+function addComment() {
+    const name = document.getElementById("forumUserName").value.trim();
+    const text = document.getElementById("forumCommentText").value.trim();
+    if(!name || !text) return;
+    matches[currentMatchId].comments.push({user: name, text: text});
+    loadComments(matches[currentMatchId].comments);
+    document.getElementById("forumUserName").value = "";
+    document.getElementById("forumCommentText").value = "";
+}
+
+function loadStats(s) {
+  document.getElementById("istatistikBars").innerHTML = 
+    stat("Kaleyi Bulan Şut", s.sutKaleyiBulan) +
+    stat("Topa Sahip Olma", s.topaSahip, "%") +
+    stat("Pas İsabeti", s.pasIsabet, "%");
+}
+
+function stat(t, v, u="") {
+  const total = (v[0] + v[1]) || 1;
+  const l = Math.round(v[0] / total * 100);
+  return `<div style="margin-bottom:15px"><div style="text-align:center;font-size:11px;opacity:0.6;margin-bottom:5px">${t}</div>
+    <div style="display:flex;align-items:center;gap:10px"><span>${v[0]}${u}</span>
+    <div class="stat-bar"><div class="stat-left" style="width:${l}%"></div><div class="stat-right" style="width:${100-l}%"></div></div>
+    <span>${v[1]}${u}</span></div></div>`;
+}
+
+function goBack() { 
+  document.body.classList.remove("derby-mode");
+  document.getElementById("match").style.display = "none"; 
+  document.getElementById("home").style.display = "block"; 
+}
+
+function showTab(id, el) {
+  document.querySelectorAll(".sub-content").forEach(c => c.style.display = "none");
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById(id).style.display = "block"; el.classList.add("active");
+}
+
+function shareMatch() {
+  const text = `🏆 Maç: ${document.getElementById("team1Name").innerText} ${document.getElementById("score").innerText} ${document.getElementById("team2Name").innerText}`;
+  navigator.clipboard.writeText(text).then(() => alert("Kopyalandı!"));
+}
+
+initStories();
+filterDate();
+</script>
+</body>
+  </html>
